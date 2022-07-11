@@ -4,29 +4,19 @@ import java.util.List;
 import java.util.Map;
 
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.ws.rs.core.NewCookie;
-import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.type.TypeFactory;
-import com.fasterxml.jackson.databind.util.StdDateFormat;
 
-import dev.leosanchez.adapters.objectmapper.resources.NewCookieDeserializer;
-import dev.leosanchez.adapters.objectmapper.resources.ResponseDeserializer;
+import io.quarkus.arc.lookup.LookupIfProperty;
 
 @ApplicationScoped
+@LookupIfProperty(name = "objectmapper.provider", stringValue = "jackson")
 public class JacksonAdapter implements IObjectMapperAdapter {
     private ObjectMapper objectMapper;
 
     public JacksonAdapter(ObjectMapper objectMapper){
         this.objectMapper = objectMapper;
-        SimpleModule module = new SimpleModule();
-        module.addDeserializer(Response.class, new ResponseDeserializer());
-        module.addDeserializer(NewCookie.class, new NewCookieDeserializer());
-        this.objectMapper.registerModule(module);
     }
 
     @Override

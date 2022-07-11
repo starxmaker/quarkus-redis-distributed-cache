@@ -3,7 +3,7 @@ package dev.leosanchez.adapters.cache;
 import java.util.List;
 import java.util.Optional;
 
-interface ICacheAdapter {
+public interface ICacheAdapter {
     void set(String key, String value);
     Optional<String> get(String key);
     void delete(String key);

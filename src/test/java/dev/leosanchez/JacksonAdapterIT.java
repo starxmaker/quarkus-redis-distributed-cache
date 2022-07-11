@@ -6,14 +6,13 @@ import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
-import javax.ws.rs.core.NewCookie;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
-import org.jboss.resteasy.specimpl.BuiltResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import dev.leosanchez.adapters.objectmapper.JacksonAdapter;
+import dev.leosanchez.models.AuthenticationResponse;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -44,6 +43,14 @@ public class JacksonAdapterIT {
     }
 
     @Test
+    public void testDeserializeUri() {
+        URI uri = UriBuilder.fromUri("http://localhost:8080/").build();
+        String serializedObject = jacksonAdapter.serializeObject(uri);
+        URI objectToMap = jacksonAdapter.deserializeObject(serializedObject, URI.class);
+        Assertions.assertEquals(uri, objectToMap);
+    }
+
+    @Test
     public void testSerializeInteger() {
         Integer objectToMap = 1;
         String serializedObject = jacksonAdapter.serializeObject(objectToMap);
@@ -55,6 +62,20 @@ public class JacksonAdapterIT {
         String serializedObject = "1";
         Integer objectToMap = jacksonAdapter.deserializeObject(serializedObject, Integer.class);
         Assertions.assertEquals(1, objectToMap);
+    }
+
+    @Test
+    public void testSerializeBoolean() {
+        Boolean objectToMap = true;
+        String serializedObject = jacksonAdapter.serializeObject(objectToMap);
+        Assertions.assertEquals("true", serializedObject);
+    }
+
+    @Test
+    public void testDeserializeBoolean() {
+        String serializedObject = "true";
+        Boolean objectToMap = jacksonAdapter.deserializeObject(serializedObject, Boolean.class);
+        Assertions.assertTrue(objectToMap);
     }
 
     @Test
@@ -86,44 +107,13 @@ public class JacksonAdapterIT {
     }
 
     @Test
-    public void testSerializeObject() {
-        DummyClass objectToMap = new DummyClass("Hola", 1, List.of("Mundo"));
-        String serializedObject = jacksonAdapter.serializeObject(objectToMap);
-        Assertions.assertEquals("{\"name\":\"Hola\",\"age\":1,\"hobbies\":[\"Mundo\"]}", serializedObject);
-    }
-
-    @Test
     public void testDeserializeObject(){
-        DummyClass objectToMap = new DummyClass("Hola", 1, List.of("Mundo"));
+        AuthenticationResponse objectToMap = AuthenticationResponse.generate("leonel");
         String serializedObject = jacksonAdapter.serializeObject(objectToMap);
-        DummyClass deserializedObject = jacksonAdapter.deserializeObject(serializedObject, DummyClass.class);
-        Assertions.assertEquals(objectToMap.getName(), deserializedObject.getName());
-        Assertions.assertEquals(objectToMap.getAge(), deserializedObject.getAge());
-        Assertions.assertEquals(objectToMap.getHobbies(), deserializedObject.getHobbies());
-    }
-
-    @Test
-    public void testDeserializeResponse(){
-        NewCookie cookie = new NewCookie("name", "value");
-        Date now = new Date();
-        String[] values = {"value1", "value2"};
-        Response response = Response
-        .ok("Hi")
-        .cookie(cookie)
-        .header("hola", "chao")
-        .header("hol2a", values)
-        .allow("GET", "POST")
-        .expires(now)
-        .location(URI.create("http://localhost:8080/hello"))
-        .encoding("UTF-8")
-        .language("es")
-        .lastModified(now)
-        .build();
-        String serializedObject = jacksonAdapter.serializeObject(response);
-
-        System.out.println(serializedObject);
-        Response deserializedObject = jacksonAdapter.deserializeObject(serializedObject, Response.class);
-        Assertions.assertEquals(response.getStatus(), deserializedObject.getStatus());
+        AuthenticationResponse deserializedObject = jacksonAdapter.deserializeObject(serializedObject, AuthenticationResponse.class);
+        Assertions.assertEquals(objectToMap.getToken(), deserializedObject.getToken());
+        Assertions.assertEquals(objectToMap.getDateIssued(), deserializedObject.getDateIssued());
+        Assertions.assertEquals(objectToMap.getUsername(), deserializedObject.getUsername());
     }
 
 }

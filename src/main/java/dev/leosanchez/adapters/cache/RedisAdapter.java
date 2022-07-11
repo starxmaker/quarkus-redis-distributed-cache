@@ -8,10 +8,12 @@ import java.util.Optional;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import io.quarkus.arc.lookup.LookupIfProperty;
 import io.quarkus.redis.client.RedisClient;
 import io.vertx.redis.client.Response;
 
 @ApplicationScoped
+@LookupIfProperty(name = "cache.provider", stringValue = "redis")
 public class RedisAdapter implements ICacheAdapter {
     @Inject
     RedisClient redisClient;
