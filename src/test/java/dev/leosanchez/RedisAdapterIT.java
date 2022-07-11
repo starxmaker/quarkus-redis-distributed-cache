@@ -38,6 +38,7 @@ public class RedisAdapterIT {
                 return new HashMap<String, String>() {
                     {
                         put("quarkus.redis.hosts", containerUrl);
+                        put("cache.provider", "redis");
                     }
                 };
     

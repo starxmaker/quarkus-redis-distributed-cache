@@ -3,27 +3,25 @@ package dev.leosanchez;
 import java.util.HashMap;
 import java.util.Map;
 import javax.inject.Inject;
-import javax.ws.rs.core.MediaType;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
-import dev.leosanchez.resources.AuthenticationResource;
+import dev.leosanchez.resources.StockResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
-import io.vertx.core.json.JsonObject;
 
 import static io.restassured.RestAssured.given;
 
 @QuarkusTest
-@TestProfile(AuthenticationResourceIT.TestProfile.class)
-public class AuthenticationResourceIT {
+@TestProfile(StockResourceIT.TestProfile.class)
+public class StockResourceIT {
 
     @Inject
-    AuthenticationResource resource;
+    StockResource resource;
 
     @Container
     public static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:5.0.3-alpine"))
@@ -43,30 +41,20 @@ public class AuthenticationResourceIT {
         }
     }
 
-    private String sendAuthenticationRequest(String username, String password) {
-        JsonObject body = new JsonObject();
-        body.put("username", username);
-        body.put("password", password);
+    private String checkProduct(String productName) {
         return given()
                 .when()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body.encode())
-                .post("/authenticate")
+                .get("/product/"+productName)
                 .then()
                 .statusCode(200)
                 .extract()
                 .asString();
     }
 
-    private void sendSimpleInvalidationRequest(String username, String password) {
-        JsonObject body = new JsonObject();
-        body.put("username", username);
-        body.put("password", password);
+    private void purchaseProduct(String productName, int quantity) {
         given()
                 .when()
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(body.encode())
-                .post("/authenticate/invalidate")
+                .post("/product/purchase?product="+productName+"&quantity="+quantity)
                 .then()
                 .statusCode(200);
     }
@@ -74,7 +62,7 @@ public class AuthenticationResourceIT {
     private void sendCompleteInvalidation(){ 
         given()
                 .when()
-                .get("/authenticate/invalidate-all")
+                .get("/product/invalidate-all")
                 .then()
                 .statusCode(200);
     }
@@ -82,33 +70,34 @@ public class AuthenticationResourceIT {
 
     @Test
     public void testCachedResponse() throws InterruptedException {
-        String receivedPayload = sendAuthenticationRequest("leonel", "sanchez");
-        String laterReceivedPayload = sendAuthenticationRequest("leonel", "sanchez");
+        String receivedPayload = checkProduct("APPLE");
+        Thread.sleep(2000);
+        String laterReceivedPayload = checkProduct("APPLE");
         Assertions.assertEquals(receivedPayload, laterReceivedPayload);
     }
 
     @Test
     public void testNotCachedResponse() throws InterruptedException {
-        String receivedPayload = sendAuthenticationRequest("carlos", "sanchez");
-        String secondReceivedPayload = sendAuthenticationRequest("fernando", "sanchez");
+        String receivedPayload = checkProduct("GRAPES");
+        String secondReceivedPayload = checkProduct("BANANA");
         Assertions.assertNotEquals(receivedPayload, secondReceivedPayload);
     }
 
     @Test
     public void testSimpleInvalidation() throws InterruptedException {
-        String receivedPayload = sendAuthenticationRequest("daniela", "sanchez");
-        sendSimpleInvalidationRequest("daniela", "sanchez");
-        String laterReceivedPayload = sendAuthenticationRequest("daniela", "sanchez");
+        String receivedPayload = checkProduct("APPLE");
+        purchaseProduct("APPLE", 2);
+        String laterReceivedPayload = checkProduct("APPLE");
         Assertions.assertNotEquals(receivedPayload, laterReceivedPayload);
     }
 
     @Test
     public void testAllInvalidation() throws InterruptedException {
-        String receivedPayload = sendAuthenticationRequest("francisco", "sanchez");
-        String secondReceivedPayload = sendAuthenticationRequest("juan", "sanchez");
+        String receivedPayload = checkProduct("BANANA");
+        String secondReceivedPayload = checkProduct("GRAPES");
         sendCompleteInvalidation();
-        String laterReceivedPayload = sendAuthenticationRequest("francisco", "sanchez");
-        String laterSecondReceivedPayload = sendAuthenticationRequest("juan", "sanchez");
+        String laterReceivedPayload = checkProduct("BANANA");
+        String laterSecondReceivedPayload = checkProduct("GRAPES");
         Assertions.assertNotEquals(receivedPayload, laterReceivedPayload);
         Assertions.assertNotEquals(secondReceivedPayload, laterSecondReceivedPayload);
     }

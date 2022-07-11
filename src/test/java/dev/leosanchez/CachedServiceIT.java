@@ -16,7 +16,6 @@ import dev.leosanchez.interceptors.Cached;
 import dev.leosanchez.interceptors.CachedInvalidate;
 import dev.leosanchez.interceptors.CachedInvalidateAll;
 import dev.leosanchez.interceptors.CachedKey;
-import dev.leosanchez.resources.AuthenticationResource;
 import io.quarkus.test.junit.QuarkusTest;
 import io.quarkus.test.junit.QuarkusTestProfile;
 import io.quarkus.test.junit.TestProfile;
@@ -24,9 +23,6 @@ import io.quarkus.test.junit.TestProfile;
 @QuarkusTest
 @TestProfile(CachedServiceIT.TestProfile.class)
 public class CachedServiceIT {
-
-    @Inject
-    AuthenticationResource resource;
 
     @Container
     public static GenericContainer<?> redis = new GenericContainer<>(DockerImageName.parse("redis:5.0.3-alpine"))
@@ -63,30 +59,9 @@ public class CachedServiceIT {
     }
 
     @Test
-    public void testCacheDifferentParameterTypes() {
-        String response = differentArgumentsInt(1);
-        String response2 = differentArgumentsString("1");
-        Assertions.assertNotEquals(response, response2);
-    }
-
-    @Test
     public void testCacheDifferentKeyValues(){
         String firstResponse = oneArgument("A.First");
         String secondResponse = oneArgument("A.Second");
-        Assertions.assertNotEquals(firstResponse, secondResponse);
-    }
-
-    @Test
-    public void testCacheKey(){
-        String firstResponse = twoArgumentWithOneCacheKey("B.First", "B.Second");
-        String secondResponse = oneArgumentNoCacheKey("B.First");
-        Assertions.assertEquals(firstResponse, secondResponse);
-    }
-
-    @Test
-    public void testCacheDifferentOrder(){
-        String firstResponse = twoArgumentWithOneCacheKey("C.First", "C.Second");
-        String secondResponse = twoArgumentWithOneCacheKey("C.Second", "C.First");
         Assertions.assertNotEquals(firstResponse, secondResponse);
     }
 
@@ -112,51 +87,46 @@ public class CachedServiceIT {
         Assertions.assertNotEquals(secondResponse, lateSecondResponse);
     }
 
+    @Test
+    public void testCacheDifferentParameterTypes() {
+        String response = differentArgumentsInt(1);
+        String response2 = differentArgumentsString("1");
+        Assertions.assertNotEquals(response, response2);
+    }
+
+    @Test
+    public void testCacheKey(){
+        String firstResponse = twoArgumentWithOneCacheKey("B.First", "B.Second");
+        String secondResponse = oneArgumentNoCacheKey("B.First");
+        Assertions.assertEquals(firstResponse, secondResponse);
+    }
+
+    @Test
+    public void testCacheDifferentOrder(){
+        String firstResponse = twoArgumentWithOneCacheKey("C.First", "C.Second");
+        String secondResponse = twoArgumentWithOneCacheKey("C.Second", "C.First");
+        Assertions.assertNotEquals(firstResponse, secondResponse);
+    }
+
+
     // dummy methods
+    // Cache sin argumentos
     @Cached(cacheName =  "cache-noarguments")
     public String noArguments() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
 
+    // Cache con expiración rápida
     @Cached(cacheName =  "cache-quicklyexpired")
     public String quicklyExpired() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
 
+    // Caché con un solo argumento
     @Cached(cacheName =  "cache-oneargument")
     public String oneArgument(String argument) {
-        UUID uuid = UUID.randomUUID();
-        return uuid.toString();
-    }
-
-    @Cached(cacheName = "cache-differentargumenttypes")
-    public String differentArgumentsInt(Integer argument) {
-        UUID uuid = UUID.randomUUID();
-        return uuid.toString();
-    }
-
-    @Cached(cacheName = "cache-differentargumenttypes")
-    public String differentArgumentsString(String argument) {
-        UUID uuid = UUID.randomUUID();
-        return uuid.toString();
-    }
-
-    @Cached(cacheName = "cache-onecachekey")
-    public String twoArgumentWithOneCacheKey(@CachedKey String argument, String secondArgument) {
-        UUID uuid = UUID.randomUUID();
-        return uuid.toString();
-    }
-
-    @Cached(cacheName = "cache-onecachekey")
-    public String oneArgumentNoCacheKey(String argument) {
-        UUID uuid = UUID.randomUUID();
-        return uuid.toString();
-    }
-
-    @Cached(cacheName = "cache-differentorder")
-    public String differentOrder(String argument, Integer argument2) {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
@@ -169,6 +139,36 @@ public class CachedServiceIT {
     public void invalidateAllCache() {
     }
 
+    // Caché de métodos con parámetros de diferente tipo
+    @Cached(cacheName = "cache-differentargumenttypes")
+    public String differentArgumentsInt(Integer argument) {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
+    @Cached(cacheName = "cache-differentargumenttypes")
+    public String differentArgumentsString(String argument) {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
 
+    // Caché con clave especifica
+    @Cached(cacheName = "cache-onecachekey")
+    public String twoArgumentWithOneCacheKey(@CachedKey String argument, String secondArgument) {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
+
+    @Cached(cacheName = "cache-onecachekey")
+    public String oneArgumentNoCacheKey(String argument) {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
+
+    // Caché de dos argumentos
+    @Cached(cacheName = "cache-twoarguments")
+    public String differentOrder(String argument, Integer argument2) {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
 
 }

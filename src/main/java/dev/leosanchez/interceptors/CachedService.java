@@ -10,9 +10,6 @@ import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.interceptor.InvocationContext;
-
-import org.eclipse.microprofile.config.ConfigProvider;
 
 import dev.leosanchez.adapters.cache.ICacheAdapter;
 import dev.leosanchez.adapters.objectmapper.IObjectMapperAdapter;
@@ -26,54 +23,56 @@ public class CachedService {
     @Inject
     IObjectMapperAdapter objectMapperAdapter;
 
-
-    public void removeSingleEntry(String key) {
-        cacheAdapter.delete(key);
-    }
-
-    public void removeAll(String cacheName) {
-        cacheAdapter.deleteAllByPrefix(cacheName);
-    }
-    public Boolean exists (String key) {
-        return cacheAdapter.check(key);
-    }
-    public Optional<String> retrieveCachedResponse(String key) {
-        return cacheAdapter.get(key);
-    }
-    
-    public String generateKey(String cacheName, String compositeKey) {
-        return cacheName + ":" + compositeKey;
-    }
-    public void savingCachedValue(String generatedKey, Object response, Integer expirationTime) {
+    public void saveCachedResponse(String generatedKey, Object response, Integer expirationTime) {
         String serializedObject = objectMapperAdapter.serializeObject(response);
         cacheAdapter.set(generatedKey, serializedObject);
         cacheAdapter.setExpire(generatedKey, expirationTime);
     }
-    public Object deserialize(String serializedObject,  InvocationContext context) {
-        Class<?> responseClass = context.getMethod().getReturnType();
-        if (responseClass.equals(List.class)) {
-            Class<?> subClass = context.getMethod().getParameterTypes()[0];
-            return objectMapperAdapter.deserializeList(serializedObject, subClass);
-        } else if (responseClass.equals(Map.class)) {
-            Class<?> keyClass = context.getMethod().getParameterTypes()[0];
-            Class<?> valueClass = context.getMethod().getParameterTypes()[1];
-            return objectMapperAdapter.deserializeMap(serializedObject, keyClass, valueClass);
+    public Optional<Object> retrieveCachedResponse(String key, Class<?> returnType, Class<?>[] parameterTypes) {
+        if (exists(key)){
+            Optional<String> serializedObject = cacheAdapter.get(key);
+            if (serializedObject.isPresent()) {
+                Object response = deserialize(serializedObject.get(), returnType, parameterTypes);
+                return Optional.of(response); 
+            }
+        }
+        return Optional.empty();
+    }
+    
+    public String generateKey(String cacheName, Object[] parameters, Annotation[][] annotations) throws Exception {
+        Object[] filteredParameters = filterParameters(parameters, annotations);
+        String compositeKey = generateCompositeKey(filteredParameters);
+        return cacheName + ":" + compositeKey;
+    }
+
+    public Boolean exists (String key) {
+        return cacheAdapter.check(key);
+    }
+
+    public void removeSingleEntry(String key) {
+        cacheAdapter.delete(key);
+    }
+    public void removeAll(String cacheName) {
+        cacheAdapter.deleteAllByPrefix(cacheName);
+    }
+    
+    private String generateCompositeKey(Object[] parameters) throws Exception {
+        if (parameters.length == 0) {
+            return "0";
         } else {
-            return objectMapperAdapter.deserializeObject(serializedObject, responseClass);
+            String concatenatedValues = "";
+            for (Object parameter : parameters) {
+                concatenatedValues += objectMapperAdapter.serializeObject(parameter);
+            }
+            MessageDigest digest = MessageDigest.getInstance("SHA-1");
+            digest.reset();
+            digest.update(concatenatedValues.getBytes("utf8"));
+            String sha1 = String.format("%040x", new BigInteger(1, digest.digest()));
+            return sha1;
         }
     }
 
-    public Integer getExpirationTime(String cacheName){
-        String propertyKey = "cache." + cacheName + ".expiration";
-        Optional<Integer> maybeCacheDuration = ConfigProvider.getConfig().getOptionalValue(propertyKey, Integer.class);
-        if (maybeCacheDuration.isPresent()) {
-            return maybeCacheDuration.get();
-        } else {
-            return 60 * 60; // 1 hour
-        }
-    }
-
-    public Object[] filteredParameters (Object[] originalParameters, Annotation[][] parameterAnnotations) {
+    private Object[] filterParameters (Object[] originalParameters, Annotation[][] parameterAnnotations) {
         List<Object> parameters = new ArrayList<>();
         for (int i = 0; i < originalParameters.length; i++) {
             Annotation[] annotations = parameterAnnotations[i];
@@ -90,21 +89,17 @@ public class CachedService {
         }
     }
 
-    public String generateCompositeKey(Object[] parameters) throws Exception {
-        if (parameters.length == 0) {
-            System.out.println("No parameters");
-            return "0";
+    private Object deserialize(String serializedObject, Class<?> returnType, Class<?>[] parameterTypes) {
+        if (returnType.equals(List.class)) {
+            Class<?> subClass = parameterTypes[0];
+            return objectMapperAdapter.deserializeList(serializedObject, subClass);
+        } else if (returnType.equals(Map.class)) {
+            Class<?> keyClass =  parameterTypes[0];
+            Class<?> valueClass = parameterTypes[1];
+            return objectMapperAdapter.deserializeMap(serializedObject, keyClass, valueClass);
         } else {
-            String concatenatedValues = "";
-            for (Object parameter : parameters) {
-                concatenatedValues += objectMapperAdapter.serializeObject(parameter);
-            }
-            MessageDigest digest = MessageDigest.getInstance("SHA-1");
-            digest.reset();
-            digest.update(concatenatedValues.getBytes("utf8"));
-            String sha1 = String.format("%040x", new BigInteger(1, digest.digest()));
-            System.out.println("SHA1: " + sha1);
-            return sha1;
+            return objectMapperAdapter.deserializeObject(serializedObject, returnType);
         }
     }
+    
 }

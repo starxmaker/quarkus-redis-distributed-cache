@@ -1,6 +1,5 @@
 package dev.leosanchez.interceptors;
 
-import java.lang.annotation.Annotation;
 import java.util.Optional;
 
 import javax.annotation.Priority;
@@ -8,10 +7,12 @@ import javax.inject.Inject;
 import javax.interceptor.AroundInvoke;
 import javax.interceptor.Interceptor;
 import javax.interceptor.InvocationContext;
+
+import org.eclipse.microprofile.config.ConfigProvider;
 import org.jboss.logging.Logger;
 
 @Interceptor
-@Priority(1)
+@Priority(10000)
 @Cached(cacheName = "")
 public class CachedInterceptor {
 
@@ -23,25 +24,38 @@ public class CachedInterceptor {
 
     @AroundInvoke
     <T> Object checkCache(InvocationContext context) throws Exception {
+        // retrieve the annotation to retrieve the cache name
         Cached cachedAnnotation = context.getMethod().getAnnotation(Cached.class);
-        String cacheName = cachedAnnotation.cacheName();
-        Annotation[][] parameterAnnotations = context.getMethod().getParameterAnnotations();
-        Object[] originalParameters = context.getParameters();
-        Object[] filteredParameters = cachedService.filteredParameters(originalParameters, parameterAnnotations);
-        String compositeKey = cachedService.generateCompositeKey(filteredParameters);
-        String generatedKey = cachedService.generateKey(cacheName, compositeKey);
-        Boolean exists = cachedService.exists(generatedKey);
-        if (exists) {
-            LOG.info("Returning cached response");
-            Optional<String> cachedValue = cachedService.retrieveCachedResponse(generatedKey);
-            if (cachedValue.isPresent()) {
-                return cachedService.deserialize(cachedValue.get(), context);
-            }
+        // generate the key based on the cache name, parameters and parameter annotations
+        String generatedKey = cachedService.generateKey(cachedAnnotation.cacheName(), context.getParameters(),
+                context.getMethod().getParameterAnnotations());
+        LOG.info("Returning cached response");
+        // look up for a saved response
+        Optional<Object> cachedValue = cachedService.retrieveCachedResponse(generatedKey,
+                context.getMethod().getReturnType(), context.getMethod().getParameterTypes());
+        if (cachedValue.isPresent()) {
+            // return response if exists
+            return cachedValue.get();
+        } else {
+            // continue the flow if not
+            LOG.info("No cache found, generating");
+            Object response = context.proceed();
+            // retrieve the expirationTime
+            Integer expirationTime = getExpirationTime(cachedAnnotation.cacheName());
+            // save the generated response
+            cachedService.saveCachedResponse(generatedKey, response, expirationTime);
+            //return the response
+            return response;
         }
-        LOG.info("No cache found, generating");
-        Object response =  context.proceed();
-        Integer expirationTime = cachedService.getExpirationTime(cacheName);
-        cachedService.savingCachedValue(generatedKey, response, expirationTime);
-        return response;
+    }
+
+    private Integer getExpirationTime(String cacheName){
+        String propertyKey = "cache." + cacheName + ".expiration";
+        Optional<Integer> maybeCacheDuration = ConfigProvider.getConfig().getOptionalValue(propertyKey, Integer.class);
+        if (maybeCacheDuration.isPresent()) {
+            return maybeCacheDuration.get();
+        } else {
+            return 60 * 60; // 1 hour
+        }
     }
 }

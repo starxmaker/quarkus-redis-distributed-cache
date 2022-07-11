@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import dev.leosanchez.adapters.objectmapper.JacksonAdapter;
-import dev.leosanchez.models.AuthenticationResponse;
+import dev.leosanchez.dto.StockResponse;
 import io.quarkus.test.junit.QuarkusTest;
 
 @QuarkusTest
@@ -108,12 +108,12 @@ public class JacksonAdapterIT {
 
     @Test
     public void testDeserializeObject(){
-        AuthenticationResponse objectToMap = AuthenticationResponse.generate("leonel");
+        StockResponse objectToMap =  new StockResponse("Manzana", 10);
         String serializedObject = jacksonAdapter.serializeObject(objectToMap);
-        AuthenticationResponse deserializedObject = jacksonAdapter.deserializeObject(serializedObject, AuthenticationResponse.class);
-        Assertions.assertEquals(objectToMap.getToken(), deserializedObject.getToken());
-        Assertions.assertEquals(objectToMap.getDateIssued(), deserializedObject.getDateIssued());
-        Assertions.assertEquals(objectToMap.getUsername(), deserializedObject.getUsername());
+        StockResponse deserializedObject = jacksonAdapter.deserializeObject(serializedObject, StockResponse.class);
+        Assertions.assertEquals(objectToMap.getProduct(), deserializedObject.getProduct());
+        Assertions.assertEquals(objectToMap.getAvailableStock(), deserializedObject.getAvailableStock());
+        Assertions.assertEquals(objectToMap.getLastUpdate(), deserializedObject.getLastUpdate());
     }
 
 }

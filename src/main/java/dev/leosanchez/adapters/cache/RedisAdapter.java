@@ -35,32 +35,6 @@ public class RedisAdapter implements ICacheAdapter {
     }
 
     @Override
-    public void delete(String key) {
-        redisClient.del(List.of(key));
-    }
-
-    @Override
-    public void deleteAllByPrefix(String prefix) {
-        List<String> keys = obtainKeysByPrefix(prefix);
-        List<String> keysToDelete = new ArrayList<>();
-        for (String key : keys) {
-            keysToDelete.add(key);
-        }
-        redisClient.del(keysToDelete);
-    }
-
-    @Override
-    public void setExpire(String key, long seconds) {
-        redisClient.expire(key, Long.toString(seconds));
-    }
-
-    @Override
-    public boolean check(String key) {
-        Response response = redisClient.exists(List.of(key));
-        return response.toString().equals("1");
-    }
-
-	@Override
 	public List<String> obtainKeysByPrefix(String prefix) {
 		List<String> keys = new ArrayList<>();
         Response response = redisClient.keys(prefix+"*");
@@ -77,5 +51,27 @@ public class RedisAdapter implements ICacheAdapter {
             return keys;
         }
 	}
+
+    @Override
+    public void delete(String key) {
+        redisClient.del(List.of(key));
+    }
+
+    @Override
+    public void deleteAllByPrefix(String prefix) {
+        List<String> keys = obtainKeysByPrefix(prefix);
+        redisClient.del(keys);
+    }
+
+    @Override
+    public void setExpire(String key, long seconds) {
+        redisClient.expire(key, Long.toString(seconds));
+    }
+
+    @Override
+    public boolean check(String key) {
+        Response response = redisClient.exists(List.of(key));
+        return response.toString().equals("1");
+    }
     
 }
