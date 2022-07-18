@@ -31,8 +31,7 @@ public class CachedInterceptor {
                 context.getMethod().getParameterAnnotations());
         LOG.info("Returning cached response");
         // look up for a saved response
-        Optional<Object> cachedValue = cachedService.retrieveCachedResponse(generatedKey,
-                context.getMethod().getReturnType(), context.getMethod().getParameterTypes());
+        Optional<Object> cachedValue = cachedService.retrieveCachedResponse(generatedKey);
         if (cachedValue.isPresent()) {
             // return response if exists
             return cachedValue.get();

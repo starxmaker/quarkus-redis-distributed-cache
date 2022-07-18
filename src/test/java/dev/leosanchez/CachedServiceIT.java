@@ -1,10 +1,11 @@
 package dev.leosanchez;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
-
-import javax.inject.Inject;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
+import dev.leosanchez.dto.StockResponse;
 import dev.leosanchez.interceptors.Cached;
 import dev.leosanchez.interceptors.CachedInvalidate;
 import dev.leosanchez.interceptors.CachedInvalidateAll;
@@ -108,7 +110,6 @@ public class CachedServiceIT {
         Assertions.assertNotEquals(firstResponse, secondResponse);
     }
 
-
     // dummy methods
     // Cache sin argumentos
     @Cached(cacheName =  "cache-noarguments")
@@ -169,6 +170,21 @@ public class CachedServiceIT {
     public String differentOrder(String argument, Integer argument2) {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
+    }
+
+    @Cached(cacheName = "cache-threelevels")
+    public Optional<List<String>> threeLevels(String argument) {
+        return Optional.of(Arrays.asList("1", "2", "3"));
+    }
+
+    @Cached(cacheName = "cache-object")
+    public StockResponse getStock(String symbol) {
+        return new StockResponse("ae",2);
+    }
+
+    @Cached(cacheName = "cache-objectlist")
+    public List<StockResponse> getStockList(String symbol) {
+        return List.of(new StockResponse("ae",2));
     }
 
 }

@@ -1,7 +1,4 @@
 package dev.leosanchez.services;
-
-import java.util.Optional;
-
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import dev.leosanchez.dto.StockResponse;

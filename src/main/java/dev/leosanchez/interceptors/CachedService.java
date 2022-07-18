@@ -5,14 +5,18 @@ import java.math.BigInteger;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+
 import dev.leosanchez.adapters.cache.ICacheAdapter;
-import dev.leosanchez.adapters.objectmapper.IObjectMapperAdapter;
 
 @ApplicationScoped
 public class CachedService {
@@ -20,19 +24,33 @@ public class CachedService {
     @Inject
     ICacheAdapter cacheAdapter;
 
-    @Inject
-    IObjectMapperAdapter objectMapperAdapter;
+    ObjectMapper objectMapper;
 
-    public void saveCachedResponse(String generatedKey, Object response, Integer expirationTime) {
-        String serializedObject = objectMapperAdapter.serializeObject(response);
+    public CachedService(){
+        objectMapper = new ObjectMapper();
+        // enable default typing
+        // NOTE: never enable this configuration (Basetype: Object) to deserialize json data from external sources,
+        // because someone could send a json string with an exploitable type which could lead to remote
+        // code execution. We are enabling it because we will deserialize only json data serialized by us and it is not
+        // accesible for external sources.
+        PolymorphicTypeValidator ptv = BasicPolymorphicTypeValidator
+            .builder()
+            .allowIfBaseType(Object.class)
+            .build();
+        objectMapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.EVERYTHING);
+    }
+
+    public void saveCachedResponse(String generatedKey, Object response, Integer expirationTime) throws JsonProcessingException{
+        String serializedObject = objectMapper.writeValueAsString(response);
         cacheAdapter.set(generatedKey, serializedObject);
         cacheAdapter.setExpire(generatedKey, expirationTime);
     }
-    public Optional<Object> retrieveCachedResponse(String key, Class<?> returnType, Class<?>[] parameterTypes) {
+    
+    public Optional<Object> retrieveCachedResponse(String key) throws JsonMappingException, JsonProcessingException{
         if (exists(key)){
             Optional<String> serializedObject = cacheAdapter.get(key);
             if (serializedObject.isPresent()) {
-                Object response = deserialize(serializedObject.get(), returnType, parameterTypes);
+                Object response = deserialize(serializedObject.get());
                 return Optional.of(response); 
             }
         }
@@ -62,7 +80,7 @@ public class CachedService {
         } else {
             String concatenatedValues = "";
             for (Object parameter : parameters) {
-                concatenatedValues += objectMapperAdapter.serializeObject(parameter);
+                concatenatedValues += objectMapper.writeValueAsString(parameter);
             }
             MessageDigest digest = MessageDigest.getInstance("SHA-1");
             digest.reset();
@@ -89,17 +107,8 @@ public class CachedService {
         }
     }
 
-    private Object deserialize(String serializedObject, Class<?> returnType, Class<?>[] parameterTypes) {
-        if (returnType.equals(List.class)) {
-            Class<?> subClass = parameterTypes[0];
-            return objectMapperAdapter.deserializeList(serializedObject, subClass);
-        } else if (returnType.equals(Map.class)) {
-            Class<?> keyClass =  parameterTypes[0];
-            Class<?> valueClass = parameterTypes[1];
-            return objectMapperAdapter.deserializeMap(serializedObject, keyClass, valueClass);
-        } else {
-            return objectMapperAdapter.deserializeObject(serializedObject, returnType);
-        }
+    private Object deserialize(String serializedObject) throws JsonProcessingException, JsonMappingException {
+        return objectMapper.readValue(serializedObject, Object.class);
     }
     
 }

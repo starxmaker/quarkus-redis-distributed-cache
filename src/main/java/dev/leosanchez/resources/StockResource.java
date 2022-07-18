@@ -8,6 +8,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import dev.leosanchez.dto.StockResponse;
 import dev.leosanchez.interceptors.Cached;
@@ -15,6 +16,7 @@ import dev.leosanchez.interceptors.CachedInvalidate;
 import dev.leosanchez.interceptors.CachedInvalidateAll;
 import dev.leosanchez.interceptors.CachedKey;
 import dev.leosanchez.services.StockService;
+import io.vertx.core.json.JsonObject;
 
 @Path("/product")
 public class StockResource {
