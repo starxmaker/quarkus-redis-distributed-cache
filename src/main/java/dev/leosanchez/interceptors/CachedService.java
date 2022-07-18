@@ -9,14 +9,18 @@ import java.util.Optional;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator;
+import com.fasterxml.jackson.databind.module.SimpleModule;
 
 import dev.leosanchez.adapters.cache.ICacheAdapter;
+import dev.leosanchez.utils.ResponseDeserializer;
+import dev.leosanchez.utils.ResponseSerializer;
 
 @ApplicationScoped
 public class CachedService {
@@ -38,6 +42,11 @@ public class CachedService {
             .allowIfBaseType(Object.class)
             .build();
         objectMapper.activateDefaultTyping(ptv, ObjectMapper.DefaultTyping.EVERYTHING);
+        SimpleModule module = new SimpleModule();
+        module.addSerializer(Response.class, new ResponseSerializer());
+        module.addDeserializer(Response.class, new ResponseDeserializer());
+        objectMapper.registerModule(module);
+        
     }
 
     public void saveCachedResponse(String generatedKey, Object response, Integer expirationTime) throws JsonProcessingException{

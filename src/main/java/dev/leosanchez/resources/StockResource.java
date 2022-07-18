@@ -1,5 +1,7 @@
 package dev.leosanchez.resources;
 
+import java.util.List;
+
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -16,7 +18,6 @@ import dev.leosanchez.interceptors.CachedInvalidate;
 import dev.leosanchez.interceptors.CachedInvalidateAll;
 import dev.leosanchez.interceptors.CachedKey;
 import dev.leosanchez.services.StockService;
-import io.vertx.core.json.JsonObject;
 
 @Path("/product")
 public class StockResource {
@@ -32,6 +33,14 @@ public class StockResource {
         return stockService.getStock(productName);
     }
 
+    @GET
+    @Produces(MediaType.APPLICATION_JSON)
+    @Cached(cacheName = "cache-list-stock-request")
+    public Response getAll () throws Exception {
+        List<StockResponse> stockResponses = stockService.getAllStock();
+        return Response.ok(stockResponses).build();
+    }
+
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @CachedInvalidate(cacheName = "cache-stock-request")
@@ -42,9 +51,17 @@ public class StockResource {
     }
 
     @GET
-    @Path("/invalidate-all")
+    @Path("/invalidate-all-individual")
     @Produces(MediaType.APPLICATION_JSON)
     @CachedInvalidateAll(cacheName = "cache-stock-request")
+    public String invalidateAllSingle () {
+        return "ok";
+    }
+
+    @GET
+    @Path("/invalidate-all-list")
+    @Produces(MediaType.APPLICATION_JSON)
+    @CachedInvalidateAll(cacheName = "cache-list-stock-request")
     public String invalidateAll () {
         return "ok";
     }

@@ -35,4 +35,8 @@ public class StockRepository {
         stocks.put(product, newStock);
     }
     
+    public Map<String,Integer> getAllStock() throws Exception {
+        Thread.sleep(3000);
+        return stocks;
+    }
 }

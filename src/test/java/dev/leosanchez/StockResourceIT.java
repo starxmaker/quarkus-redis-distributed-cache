@@ -62,7 +62,7 @@ public class StockResourceIT {
     private void sendCompleteInvalidation(){ 
         given()
                 .when()
-                .get("/product/invalidate-all")
+                .get("/product/invalidate-all-individual")
                 .then()
                 .statusCode(200);
     }
